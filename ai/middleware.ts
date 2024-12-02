@@ -15,14 +15,25 @@ export const cacheMiddleware: LanguageModelV1Middleware = {
   wrapGenerate: async ({ doGenerate, params }) => {
     const cacheKey = JSON.stringify(params);
 
-    const cached = await redis.get(cacheKey);
+    const cached = (await redis.get(cacheKey)) as Awaited<
+      ReturnType<LanguageModelV1["doGenerate"]>
+    > | null;
+
     if (cached !== null) {
-      return cached as ReturnType<LanguageModelV1["doGenerate"]>;
+      return {
+        ...cached,
+        response: {
+          ...cached.response,
+          timestamp: cached?.response?.timestamp
+            ? new Date(cached?.response?.timestamp)
+            : undefined,
+        },
+      };
     }
 
     const result = await doGenerate();
 
-    redis.set(cacheKey, { ...result, response: null }); // hacky - setting response as null avoids generateText useChat error
+    redis.set(cacheKey, result);
 
     return result;
   },
