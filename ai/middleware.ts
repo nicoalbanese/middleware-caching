@@ -22,7 +22,7 @@ export const cacheMiddleware: LanguageModelV1Middleware = {
 
     const result = await doGenerate();
 
-    redis.set(cacheKey, { ...result, response: null }); // setting response as null avoids generateText useChat error
+    redis.set(cacheKey, { ...result, response: null }); // hacky - setting response as null avoids generateText useChat error
 
     return result;
   },
@@ -31,13 +31,22 @@ export const cacheMiddleware: LanguageModelV1Middleware = {
 
     // Check if the result is in the cache
     const cached = await redis.get(cacheKey);
+
+    // If cached, return a simulated ReadableStream that yields the cached result
     if (cached !== null) {
-      // If cached, return a simulated ReadableStream that yields the cached result
+      // Format the timestamps in the cached response
+      const formattedChunks = (cached as LanguageModelV1StreamPart[]).map(
+        (p) => {
+          if (p.type === "response-metadata" && p.timestamp) {
+            return { ...p, timestamp: new Date(p.timestamp) };
+          } else return p;
+        },
+      );
       return {
         stream: simulateReadableStream({
           initialDelayInMs: 0,
           chunkDelayInMs: 10,
-          chunks: cached as LanguageModelV1StreamPart[],
+          chunks: formattedChunks,
         }),
         rawCall: { rawPrompt: null, rawSettings: {} },
       };
