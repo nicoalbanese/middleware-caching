@@ -3,9 +3,10 @@
 import { useChat } from "ai/react";
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, error } = useChat({onResponse: (response) => {
-    console.log(response)
-  }});
+  const { messages, input, handleInputChange, handleSubmit, error } = useChat({
+    api: "/api/chat-generate",
+    streamProtocol: "text",
+  });
   if (error) return <div>{error.message}</div>;
 
   return (
@@ -15,11 +16,8 @@ export default function Chat() {
           <div key={m.id} className="whitespace-pre-wrap">
             <div>
               <div className="font-bold">{m.role}</div>
-              {m.toolInvocations ? (
-                <pre>{JSON.stringify(m.toolInvocations, null, 2)}</pre>
-              ) : (
-                <p>{m.content}</p>
-              )}
+              <p>{m.content}</p>
+              <pre>{JSON.stringify(m.toolInvocations, null, 2)}</pre>
             </div>
           </div>
         ))}
